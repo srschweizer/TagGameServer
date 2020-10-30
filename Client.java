@@ -7,7 +7,7 @@ public class Client {
  
         try {
             
-            Socket s = new Socket("67.135.220.132", 80);
+            Socket s = new Socket("127.0.0.1", 8080);
             PrintWriter out = new PrintWriter(s.getOutputStream(), true);
             out.println("This is the network message");
             out.flush();
