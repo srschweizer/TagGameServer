@@ -6,6 +6,7 @@ public class Server {
 
     private ServerSocket ss;
     private Socket s;
+    private ArrayList<PlayerInfo> networkPlayers;
 
     public static void main(String[] args) throws IOException {
         Server theServer = new Server();
@@ -13,6 +14,7 @@ public class Server {
 
     public Server() {
 
+        networkPlayers = new ArrayList<PlayerInfo>();
         try {
             ss = new ServerSocket(8080);
             while (true) {
@@ -26,6 +28,14 @@ public class Server {
         } catch (Exception ex) {
             System.out.println(ex);
         }
+
+    }
+
+    private class PlayerInfo {
+        public int x;
+        public int y;
+        public boolean it;
+        public int id;
 
     }
 
@@ -43,19 +53,128 @@ public class Server {
             try {
                 System.out.println("Conected to: " + s.getRemoteSocketAddress().toString());
 
-                DataInputStream in = new DataInputStream(s.getInputStream());
-                DataOutputStream out = new DataOutputStream(s.getOutputStream());
+                BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
+                BufferedWriter out = new BufferedWriter(new OutputStreamWriter(s.getOutputStream()));
                 String received = in.readLine();
-                //implement tag protocol here
-                System.out.println("Recieved: " + received);
+                // implement tag protocol here
 
-                in.close();
+                if (received.startsWith("join"))
+                    out.write(join(received));
+                if (received.startsWith("request"))
+                    out.write(request(received));
+                if (received.startsWith("idcount"))
+                    out.write(requestIdCount(received));
+                if (received.startsWith("index"))
+                    out.write(requestIndex(received));
                 out.close();
-                s.close();
                 System.out.println("Closing Conection:");
+            } catch (Exception ex) {
+                System.out.println("run ex: " + ex);
+            }
+        }
+
+        public String join(String in) {
+            String ret = "notok:system";
+            boolean unique = true;
+            System.out.println("join Recieved: " + in);
+            try {
+                StringTokenizer st = new StringTokenizer(in, ":");
+                System.out.println(st.countTokens());
+                if (st.countTokens() == 4) {
+                    String cmd = st.nextToken();
+                    int id = Integer.valueOf(st.nextToken());
+                    int x = Integer.valueOf(st.nextToken());
+                    int y = Integer.valueOf(st.nextToken());
+
+                    for (PlayerInfo test : networkPlayers) {
+                        if (test.id == id) {
+                            ret = "notok:idtaken";
+                            unique = false;
+                        }
+                        if (test.x == x && test.y == y) {
+                            ret = "notok:xytaken";
+                            unique = false;
+                        }
+                    }
+                    if (unique) {
+                        PlayerInfo newPlayer = new PlayerInfo();
+                        newPlayer.id = id;
+                        newPlayer.x = x;
+                        newPlayer.y = y;
+                        newPlayer.it = false;
+                        networkPlayers.add(newPlayer);
+                        ret = "ok";
+                        System.out.println("player added");
+                    }
+                }
+
+            } catch (Exception ex) {
+                System.out.println(ex);
+
+            }
+            return ret;
+        }
+
+        public String request(String in) {
+            String ret = "notok:idnotfound";
+            System.out.println("request Recieved: " + in);
+            try {
+                StringTokenizer st = new StringTokenizer(in, ":");
+                if (st.countTokens() == 2) {
+                    String cmd = st.nextToken();
+                    int id = Integer.valueOf(st.nextToken());
+
+                    for (PlayerInfo test : networkPlayers) {
+                        if (test.id == id) {
+                            ret = "ok:" + test.id + ":" + test.x + ":" + test.y + ":" + test.it;
+                        }
+                    }
+
+                }
+
+            } catch (Exception ex) {
+                System.out.println(ex);
+                ret = "notok:system";
+            }
+            return ret;
+        }
+
+        public String requestIndex(String in) {
+            String ret = "notok:indexnotfound";
+            System.out.println("request Recieved: " + in);
+            try {
+                StringTokenizer st = new StringTokenizer(in, ":");
+                System.out.println(st.countTokens());
+                if (st.countTokens() == 2) {
+                    String cmd = st.nextToken();
+                    int index = Integer.valueOf(st.nextToken());
+                    ret = "ok:" + networkPlayers.get(index).id;
+                    
+
+                }
+
             } catch (Exception ex) {
                 System.out.println(ex);
             }
+            return ret;
+        }
+
+        public String requestIdCount(String in) {
+            String ret = "notok:idnotfound";
+            System.out.println("request Recieved: " + in);
+            try {
+                StringTokenizer st = new StringTokenizer(in, ":");
+                if (st.countTokens() == 1) {
+                    ret = "ok:" + networkPlayers.size();
+                }
+
+            }
+
+            catch (Exception ex) {
+                System.out.println(ex);
+                ret = "notok:system";
+            }
+            return ret;
         }
 
     }
