@@ -6,7 +6,7 @@ public class Server {
 
     private ServerSocket ss;
     private Socket s;
-    private ArrayList<PlayerInfo> networkPlayers;
+    private Vector<PlayerInfo> networkPlayers;
 
     public static void main(String[] args) throws IOException {
         Server theServer = new Server();
@@ -14,9 +14,9 @@ public class Server {
 
     public Server() {
 
-        networkPlayers = new ArrayList<PlayerInfo>();
+        networkPlayers = new Vector<PlayerInfo>();
         try {
-            ss = new ServerSocket(8080);
+            ss = new ServerSocket(80);
             while (true) {
 
                 System.out.println("Waiting for connection:");
@@ -66,6 +66,8 @@ public class Server {
                     out.write(requestIdCount(received));
                 if (received.startsWith("index"))
                     out.write(requestIndex(received));
+                if (received.startsWith("move"))
+                    out.write(move(received));
                 out.close();
                 System.out.println("Closing Conection:");
             } catch (Exception ex) {
@@ -79,7 +81,6 @@ public class Server {
             System.out.println("join Recieved: " + in);
             try {
                 StringTokenizer st = new StringTokenizer(in, ":");
-                System.out.println(st.countTokens());
                 if (st.countTokens() == 4) {
                     String cmd = st.nextToken();
                     int id = Integer.valueOf(st.nextToken());
@@ -108,6 +109,47 @@ public class Server {
                     }
                 }
 
+            } catch (Exception ex) {
+                System.out.println(ex);
+
+            }
+            return ret;
+        }
+        public String move(String in) {
+            String ret = "notok:notvalid";
+            boolean available = true;
+            System.out.println("move Recieved: " + in);
+            try {
+                StringTokenizer st = new StringTokenizer(in, ":");
+                if (st.countTokens() == 4) {
+                    String cmd = st.nextToken();
+                    int id = Integer.valueOf(st.nextToken());
+                    int x = Integer.valueOf(st.nextToken());
+                    int y = Integer.valueOf(st.nextToken());
+                    PlayerInfo me = null;
+                    for (PlayerInfo test : networkPlayers) {
+                        if (test.id == id)  me = test;
+                    }
+                    if(me!= null){
+
+                         boolean freeSpace = true;
+                        if((Math.abs(me.x - x) < 5) && (Math.abs(me.y - y) < 5))
+                        {
+                            for (PlayerInfo test : networkPlayers) {
+                                if (test.x == x && test.y == y) freeSpace = false;
+                            }
+    
+                             if(freeSpace) {
+                                me.x = x;
+                                me.y = y;
+                                ret = "ok";
+                            }
+                            else{
+                                ret = "notok:xytaken";
+                            }
+                        }
+                    }
+                }
             } catch (Exception ex) {
                 System.out.println(ex);
 
